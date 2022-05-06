@@ -38,6 +38,13 @@ def alignment(request):
             df_dict['TEXTINPUT'].append(e[e.find(':')+1:])
         df = pd.DataFrame(df_dict,columns=['EMAIL','ORDER','LAT','LON','TEXTINPUT'])
 
+        # Check if email already in database, if so, remove
+        df_align = pd.DataFrame(list(ALIGN.objects.values()))
+        if df_align.shape[0] == 0:
+            pass
+        elif email in df_align['EMAIL'].values.tolist():
+            ALIGN.objects.filter(EMAIL=email).delete()
+
         # Send data to db
         for i, e in enumerate(df.values.tolist()):
             reg = ALIGN(EMAIL=df['EMAIL'].iloc[i], ORDER=df['ORDER'].iloc[i], LAT=df['LAT'].iloc[i], LON=df['LON'].iloc[i], TEXTINPUT=df['TEXTINPUT'].iloc[i])
@@ -65,6 +72,13 @@ def interchanges(request):
             df_dict['TEXTINPUT'].append(e[e.find(':')+1:])
         df = pd.DataFrame(df_dict,columns=['EMAIL','LAT','LON','TEXTINPUT'])
 
+        # Check if email already in database, if so, remove
+        df_int = pd.DataFrame(list(INT.objects.values()))
+        if df_int.shape[0] == 0:
+            pass
+        elif email in df_int['EMAIL'].values.tolist():
+            INT.objects.filter(EMAIL=email).delete()
+
         # Send data to db
         for i, e in enumerate(df.values.tolist()):
             reg = INT(EMAIL=df['EMAIL'].iloc[i], LAT=df['LAT'].iloc[i], LON=df['LON'].iloc[i], TEXTINPUT=df['TEXTINPUT'].iloc[i])
@@ -86,12 +100,14 @@ def results(request):
     
     df_align = pd.DataFrame(list(ALIGN.objects.values()))
     df_int = pd.DataFrame(list(INT.objects.values()))
+    if df_align.shape[0] == 0 or df_int.shape[0] == 0:
+        return render(request, 'results_nodata.html',  context={'email':email_master, 'email_link':email_href})
+    else:
+        plot_div_align = map_alignment(df_align)
+        plot_div_int = map_int(df_int)
+        plot_div_table = table_align(df_align)
 
-    plot_div_align = map_alignment(df_align)
-    plot_div_int = map_int(df_int)
-    plot_div_table = table_align(df_align)
-
-    return render(request, 'results.html', context={'plot_div_align': plot_div_align, 'plot_div_int': plot_div_int,'plot_div_table': plot_div_table,'email':email_master, 'email_link':email_href})
+        return render(request, 'results.html', context={'plot_div_align': plot_div_align, 'plot_div_int': plot_div_int,'plot_div_table': plot_div_table,'email':email_master, 'email_link':email_href})
 
 @csrf_exempt
 def error_404(request, exception):
@@ -104,7 +120,7 @@ def map_alignment(df):
     plotly.express.set_mapbox_access_token('pk.eyJ1Ijoic3drbHVtcCIsImEiOiJja3Z4MGk0aTYwaGlrMnBubzYyeXA2bW91In0.UmjBh9eSwNC8BJ0p5MRF-w')
     df = df.sort_values(['EMAIL','ORDER'],ascending=True)
     fig = px.line_mapbox(df, lat="LAT", lon="LON", color="EMAIL",line_group="EMAIL",
-    center = {"lat":  61.565, "lon":-149.52}, zoom=10.5,
+    center = {"lat":  61.54, "lon":-149.52}, zoom=10,
     mapbox_style="open-street-map",
     hover_data=['ORDER']
     )
@@ -129,9 +145,11 @@ def table_align(df):
     fig = go.Figure(data=[go.Table(
         header=dict(values=list(df.columns),
                     fill_color='paleturquoise',
+                    line_color='darkslategray',
                     align='center'),
         cells=dict(values=[df.EMAIL, df.ORDER, df.TEXTINPUT],
                 fill_color='white',
+                line_color='darkslategray',
                 align='center'))
     ])
 
@@ -158,7 +176,7 @@ def table_align(df):
 def map_int(df):
     
     plotly.express.set_mapbox_access_token('pk.eyJ1Ijoic3drbHVtcCIsImEiOiJja3Z4MGk0aTYwaGlrMnBubzYyeXA2bW91In0.UmjBh9eSwNC8BJ0p5MRF-w')
-    fig = px.density_mapbox(df, lat="LAT", lon="LON", radius=10, center = {"lat":  61.565, "lon":-149.52}, zoom=10.5,mapbox_style="open-street-map")
+    fig = px.density_mapbox(df, lat="LAT", lon="LON", radius=20, center = {"lat":  61.54, "lon":-149.52}, zoom=10, mapbox_style="open-street-map")
 
     fig.update_layout(
         font=dict(
