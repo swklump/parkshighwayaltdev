@@ -92,19 +92,34 @@ function addMarker(e) {
     
     popupname = dict_pointlist.length+1;
     popupname = popupname.toString();
-    var popupfeatures =
-    '<button type="button" class="submit">Save text</button>'+'<p></p>'+
-    '<button type="button" class="remove">Delete marker</button>';
-    popupfeatures = 
-    '<textarea id="popuptext' + popupname + '" width=1500px rows=4 placeholder="Enter text here...">' + 
-    '</textarea>'+'<br>'+ popupfeatures;
+
+    // Construct the popup div element
+    var textarea = document.createElement('textarea');
+    textarea.setAttribute('id','popuptext'+popupname)
+    textarea.setAttribute('width','1500px')
+    textarea.setAttribute('rows','4')
+    textarea.setAttribute('placeholder','Enter text here...')
+    
+    var btn_save = document.createElement('button');
+    btn_save.innerText = 'Save Text';
+    btn_save.setAttribute('class','btn btn-primary btn-sm')
+    var btn_del = document.createElement('button');
+    btn_del.innerText = 'Delete Marker';
+    btn_del.setAttribute('class','btn btn-danger btn-sm')
+
+    var buttonelement = document.createElement('div');
+    buttonelement.appendChild(textarea)
+    buttonelement.appendChild(document.createElement('p'))
+    buttonelement.appendChild(btn_save)
+    buttonelement.appendChild(document.createElement('br'))
+    buttonelement.appendChild(btn_del)
 
     var marker = new L.marker(e.latlng, {
     draggable: false
     })
     .bindTooltip(popupname,{permanent: true})
     .addTo(map)
-    .bindPopup(popupfeatures, {maxWidth : 560})
+    .bindPopup(buttonelement, {maxWidth : 560})
     .addTo(markergroup);
     marker_arr.push(marker);
     var point = new L.LatLng(e.latlng['lat'], e.latlng['lng']);
@@ -130,53 +145,13 @@ function addMarker(e) {
 
     marker_num = marker_num + 1;
 
-    // event remove marker
-    marker.on("popupopen", removeMarker);
-    // event save text
-    marker.on("popupopen", saveText);
-    // load user input text
     marker.on("popupopen",loadText);
 
-}
-
-// Load text
-function loadText() {
-    var key_lat = this["_latlng"]['lat'];
-    var popupnum = lat_point_lookup[key_lat];
-    var s1 = document.getElementById('popuptext'+popupnum.toString());
-    if (popupnum in text_point_dict) {
-        s1.innerHTML = text_point_dict[popupnum];
-    }
-}
-
-// Save popup text
-function saveText() {
-    var marker = this;
-    var key_lat = this["_latlng"]['lat'];
-    var btn = document.querySelector(".submit");
-    btn.addEventListener("click", function () {
+    // Delete button function
+    btn_del.onclick =  function () {
+        var key_lat = marker["_latlng"]['lat'];
         var popupnum = lat_point_lookup[key_lat];
-        var s1 = document.getElementById('popuptext'+popupnum.toString());
-        
-        // send data to hidden form
-        text_point_dict[popupnum] = s1.value;
-        data_to_hidden_form(text_point_dict,'textinput')
 
-        map.closePopup();
-    }); 
-}
-
-// Remove marker-----------------------------------------------------------------------------------------------------------------------------------
-function removeMarker() {
-
-    // markergroup.clearAllEventListeners();
-    // map.clearAllEventListeners();
-    var marker = this;
-    var key_lat = this["_latlng"]['lat'];
-    var popupnum = lat_point_lookup[key_lat];
-    btn_remove = document.querySelector(".remove");
-
-    btn_remove.addEventListener("click", function () {
         // Only the most recently added point can be deleted
         if (key_lat !== master_pointlist[master_pointlist.length-1]['lat']) {
             popupname = dict_pointlist.length.toString();
@@ -224,6 +199,30 @@ function removeMarker() {
 
             marker_num = marker_num - 1;
         };
-    });
+    };
+
+    // Save text button
+    btn_save.onclick =  function () {
+        var key_lat = marker["_latlng"]['lat'];
+        var popupnum = lat_point_lookup[key_lat];
+        var s1 = document.getElementById('popuptext'+popupnum.toString());
+        // send data to hidden form
+        text_point_dict[popupnum] = s1.value;
+        data_to_hidden_form(text_point_dict,'textinput')
+        map.closePopup();
+    };
+
 }
 
+// Load text
+function loadText() {
+    var key_lat = this["_latlng"]['lat'];
+    var popupnum = lat_point_lookup[key_lat];
+    var s1 = document.getElementById('popuptext'+popupnum.toString());
+    s1.innerHTML = '';
+    s1.value = '';
+    if (popupnum in text_point_dict) {
+        s1.innerHTML = text_point_dict[popupnum];
+        s1.value = text_point_dict[popupnum];
+    }
+}
